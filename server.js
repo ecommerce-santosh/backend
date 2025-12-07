@@ -1,5 +1,4 @@
-// server.js (updated)
-// Your original imports + small additions for graceful shutdown handling
+
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
@@ -16,7 +15,7 @@ import siteRoutes from "./routes/siteRoutes.js";
 import seoRoutes from "./routes/seoRoutes.js";
 
 import healthRoutes from "./routes/healthRoutes.js";
-import { startHealthChecks, stopHealthChecks } from "./utils/healthCheck.js"; // --- ADDED: stopHealthChecks import
+import { startHealthChecks, stopHealthChecks } from "./utils/healthCheck.js"; 
 import sitemapRoutes from "./routes/sitemapRoutes.js";
 dotenv.config();
 
@@ -76,8 +75,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Start server and then start health checks (if configured).
-// NOTE: we keep a reference to `server` so we can gracefully stop health checks on shutdown.
+
 const server = app.listen(PORT, () => {
   console.log("=======================================");
   console.log(`✅ Server started successfully`);
@@ -86,7 +84,7 @@ const server = app.listen(PORT, () => {
   console.log(`🧩 Client URL: ${process.env.CLIENT_URL || "localhost"}`);
   console.log("=======================================");
 
-  // --- ADDED: Start health checks if HEALTH_ROUTE is defined ---
+
   try {
     const healthUrl = process.env.HEALTH_ROUTE;
     const intervalMs = process.env.HEALTH_INTERVAL_MS ? Number(process.env.HEALTH_INTERVAL_MS) : 100000; // default 3 minutes
