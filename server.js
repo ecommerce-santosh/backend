@@ -32,7 +32,7 @@ app.use(fileUpload({ useTempFiles: true }));
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL ,
+    origin: process.env.CLIENT_URL || "https://backend-7bkz.onrender.com",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
