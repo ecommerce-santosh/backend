@@ -167,7 +167,7 @@ export function orderDeletedTemplate(order = {}) {
   const orderId = escapeHtml(String(order._id ?? order.id ?? "N/A"));
   const body = `
     <p>Hi ${name},</p>
-    <p>Your order <strong>#${orderId}</strong> has been deleted from our system.</p>
+    <p>Your order <strong> #${orderId}</strong> has been deleted from our system.</p>
     <p>If you did not request this, please contact support immediately.</p>
     <p>We didnot store your data longer, we concern about your privacy.</p>
     <a href="http://localhost:5173/"> Visit Website</a>
