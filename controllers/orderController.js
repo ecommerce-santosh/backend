@@ -1,6 +1,7 @@
-
+// controllers/orderController.js
 import Order from "../models/orderModel.js";
 import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import {
   orderCreatedTemplate,
   orderUpdatedTemplate,
@@ -8,54 +9,113 @@ import {
 } from "../utils/emailTemp.js";
 
 const {
+  RESEND_API_KEY,
   SMTP_HOST,
   SMTP_PORT,
   SMTP_USER,
   SMTP_PASS,
-  EMAIL_FROM, 
+  SMTP_SECURE,
+  EMAIL_FROM,
 } = process.env;
 
-let transporter = null;
-if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS) {
-  transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT),
-    secure: Number(SMTP_PORT) === 465, 
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-  });
-
-
-  transporter.verify().then(
-    () => console.log("📧 Mailer ready"),
-    (err) => console.warn("⚠ Mailer verify failed:", err && err.message ? err.message : err)
-  );
+// --- Initialize primary transport: Resend (API) ---
+let resendClient = null;
+if (RESEND_API_KEY) {
+  try {
+    resendClient = new Resend(RESEND_API_KEY);
+    console.log("📧 Email: Using Resend as primary transport");
+  } catch (err) {
+    console.warn("⚠️ Resend initialization failed:", err?.message || err);
+    resendClient = null;
+  }
 } else {
-  console.warn("⚠ SMTP env variables not fully set. Email notifications are disabled.");
+  console.log("ℹ️ RESEND_API_KEY not set — Resend disabled");
 }
 
+// --- Initialize SMTP fallback (nodemailer) ---
+let smtpTransporter = null;
+if (!resendClient) {
+  if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS) {
+    smtpTransporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT),
+      secure: Number(SMTP_PORT) === 465 || SMTP_SECURE === "true",
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      tls: { rejectUnauthorized: false },
+      logger: true,
+      debug: true,
+    });
 
+    smtpTransporter
+      .verify()
+      .then(() => console.log("📧 SMTP transporter verified and ready"))
+      .catch((err) => console.warn("⚠️ SMTP verify failed:", err?.message || err));
+  } else {
+    console.warn("⚠️ SMTP env variables not fully set. SMTP fallback disabled.");
+  }
+} else {
+  console.log("ℹ️ SMTP fallback skipped because Resend is configured");
+}
+
+/**
+ * sendOrderEmail - wrapper used by the controller functions.
+ * Uses Resend API if available, otherwise nodemailer SMTP fallback.
+ *
+ * @param {string} to - recipient email
+ * @param {string} subject - email subject
+ * @param {string} html - html content
+ */
 async function sendOrderEmail(to, subject, html) {
-  if (!transporter) {
-    console.warn("Email not sent — transporter not configured");
+  if (!to) {
+    console.warn("Email not sent — no recipient provided");
     return;
   }
-  const fromAddr = EMAIL_FROM || SMTP_USER;
-  try {
-    const info = await transporter.sendMail({
-      from: fromAddr,
-      to,
-      subject,
-      html,
-    });
-    console.log(`📧 Email sent to ${to}: ${info.messageId || "sent"}`);
-  } catch (err) {
-    console.error("📧 Email send error:", err?.message || err);
-  }
-}
 
+  const fromAddr = EMAIL_FROM || SMTP_USER || `no-reply@${process.env.DOMAIN || "example.com"}`;
+
+  // Use Resend API if available
+  if (resendClient) {
+    try {
+      // Resend expects `from` and `to` as strings; it supports HTML body
+      const resp = await resendClient.emails.send({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+      });
+      console.log(`📧 Resend: email sent/queued to ${to}`, resp?.id ? `id=${resp.id}` : "");
+      return resp;
+    } catch (err) {
+      console.error("📧 Resend send error:", err?.message || err);
+      // fallthrough to try SMTP fallback if configured
+    }
+  }
+
+  // Fallback to nodemailer SMTP transporter
+  if (smtpTransporter) {
+    try {
+      const info = await smtpTransporter.sendMail({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+      });
+      console.log(`📧 SMTP: Email sent to ${to}: ${info.messageId || "sent"}`);
+      return info;
+    } catch (err) {
+      console.error("📧 SMTP send error:", err?.message || err);
+      return null;
+    }
+  }
+
+  console.warn("⚠️ No email transport configured (Resend and SMTP missing). Email not sent.");
+  return null;
+}
 
 // 🧩 Create Order (USER)
 export const createOrder = async (req, res) => {
@@ -67,12 +127,10 @@ export const createOrder = async (req, res) => {
     const created = await order.save();
     res.status(201).json(created);
 
-    
     try {
       const populated = await created.populate("user", "name email");
       const recipient = populated.user?.email;
       if (recipient) {
-
         sendOrderEmail(
           recipient,
           `Order Confirmation — ${populated._id}`,
@@ -119,7 +177,6 @@ export const updateOrder = async (req, res) => {
     if (!updatedOrder) return res.status(404).json({ message: "Order not found" });
     res.json(updatedOrder);
 
-   
     try {
       const populated = await updatedOrder.populate("user", "name email");
       const recipient = populated.user?.email;
@@ -140,7 +197,6 @@ export const updateOrder = async (req, res) => {
   }
 };
 
-
 export const deleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -148,9 +204,7 @@ export const deleteOrder = async (req, res) => {
     if (!deletedOrder) return res.status(404).json({ message: "Order not found" });
     res.json({ message: "Order deleted successfully" });
 
-
     try {
-   
       const populated = await deletedOrder.populate("user", "name email");
       const recipient = populated.user?.email;
       if (recipient) {
