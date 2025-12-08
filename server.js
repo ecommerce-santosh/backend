@@ -36,7 +36,7 @@ app.use(
     methods: ['GET','POST','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
   })
-);
+); 
 
 app.get("/", (req, res) => {
   console.log("📡 Health check endpoint hit successfully");
