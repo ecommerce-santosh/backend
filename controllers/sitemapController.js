@@ -86,7 +86,12 @@ export async function buildSitemapXml({ siteUrl }) {
  */
 export async function serveSitemap(req, res) {
   try {
-    const SITE_URL = process.env.SITE_URL || process.env.CLIENT_URL || "http://localhost:5173";
+    const SITE_URL = ["http://localhost:5173"];
+    if (process.env.SITE_URL) {
+  SITE_URL = process.env.SITE_URL.split(",");
+} else if (process.env.CLIENT_URL) {
+  SITE_URL = process.env.CLIENT_URL.split(",");
+};
     const CACHE_TTL_MS = process.env.SITEMAP_CACHE_TTL_MS ? Number(process.env.SITEMAP_CACHE_TTL_MS) : 60 * 60 * 1000; // 1h
 
     const now = Date.now();
