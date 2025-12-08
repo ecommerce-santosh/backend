@@ -31,7 +31,7 @@ app.use(fileUpload({ useTempFiles: true }));
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL.split(",") ,
+    origin: process.env.CLIENT_URL ,
     credentials: true,
     methods: ['GET','POST','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
@@ -81,7 +81,7 @@ const server = app.listen(PORT, () => {
   console.log(`✅ Server started successfully`);
   console.log(`📡 Mode: ${process.env.NODE_ENV || "development"}`);
   console.log(`🌐 Port: ${PORT}`);
-  console.log(`🧩 Client URL: ${process.env.CLIENT_URL.split("") || "localhost"}`);
+  console.log(`🧩 Client URL: ${process.env.CLIENT_URL || "localhost"}`);
   console.log("=======================================");
 
 
