@@ -61,15 +61,12 @@ if (!resendClient) {
   }
 }
 
-// --------------------------------------
-// ⭐ Unified email sender: sendEmail()
-// --------------------------------------
+
+
 const sendEmail = async (to, subject, html) => {
   const fromAddr = EMAIL_FROM || SMTP_USER || "no-reply@example.com";
 
-  // -----------------------
-  // 1️⃣ Try RESEND (primary)
-  // -----------------------
+ 
   if (resendClient) {
     try {
       const resp = await resendClient.emails.send({
@@ -83,13 +80,10 @@ const sendEmail = async (to, subject, html) => {
       return resp;
     } catch (err) {
       console.error("❌ Resend send error:", err?.message || err);
-      // continue to SMTP fallback
+      
     }
   }
 
-  // -----------------------
-  // 2️⃣ SMTP Fallback
-  // -----------------------
   if (smtpTransporter) {
     try {
       const info = await smtpTransporter.sendMail({

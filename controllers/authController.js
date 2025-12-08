@@ -60,7 +60,7 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// ✅ Verify Email
+
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
@@ -106,7 +106,7 @@ export const loginUser = async (req, res) => {
     if (!user.isVerified) {
       return res
         .status(403)
-        .json({ message: "Please verify your email before logging in." });
+        .json({ message: "Please verify your email before logging in. If you didnot still receive any emails - please contact on whatsapp +977 9866573177 or try registering again after 24 hours." });
     }
 
     // ✅ Validate password using bcrypt.compare()
